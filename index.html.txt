@@ -24,7 +24,7 @@
             margin-bottom: 10px;
         }
         .title {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 900;
             margin: 0;
         }
@@ -41,27 +41,27 @@
             background: #fff;
         }
         .bus-route {
-            font-size: 36px;
+            font-size: 32px;
             font-weight: 900;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .bus-dest {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
         }
         .eta-list {
             margin-top: 8px;
             display: flex;
-            gap: 15px;
+            gap: 10px;
         }
         .eta-badge {
             background-color: #000;
             color: #fff;
             padding: 6px 12px;
             border-radius: 6px;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
         }
         .eta-badge.secondary {
@@ -70,7 +70,7 @@
             border: 2px solid #000;
         }
         .footer {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             text-align: right;
             border-top: 2px solid #000;
@@ -112,11 +112,14 @@
     <div class="footer" id="update-time">最後更新: --:--:--</div>
 
     <script>
-        // 九巴 API 抓取函數
         async function fetchETA(stopId, route, serviceType, elementId) {
-            const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType}`;
+            const targetUrl = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType}`;
+            // 使用 corsproxy.io 繞過瀏覽器跨域限制
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
             try {
-                const response = await fetch(url);
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('Network error');
                 const data = await response.json();
                 const container = document.getElementById(elementId);
                 container.innerHTML = '';
@@ -154,24 +157,20 @@
 
             } catch (error) {
                 console.error(error);
-                document.getElementById(elementId).innerHTML = '<div class="eta-badge secondary">網絡錯誤</div>';
+                document.getElementById(elementId).innerHTML = '<div class="eta-badge secondary">更新中...</div>';
             }
         }
 
         function updateAllETA() {
-            // 富蝶總站 - 71K (Service Type 1)
+            // 富蝶總站代碼
             fetchETA('3926838891465FF9', '71K', '1', 'eta-71k');
-            // 富蝶總站 - 72K (Service Type 1)
             fetchETA('3926838891465FF9', '72K', '1', 'eta-72k');
 
             const now = new Date();
             document.getElementById('update-time').innerText = `最後更新: ${now.toLocaleTimeString('zh-HK')}`;
         }
 
-        // 首次執行
         updateAllETA();
-
-        // 網頁內部每 15 秒自動重新抓取 API
         setInterval(updateAllETA, 15000);
     </script>
 </body>
