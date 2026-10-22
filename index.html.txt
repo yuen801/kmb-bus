@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>富蝶邨巴士實時報站</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .header {
+            border-bottom: 4px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 0;
+        }
+        .subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        .bus-card {
+            border: 3px solid #000;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #fff;
+        }
+        .bus-route {
+            font-size: 36px;
+            font-weight: 900;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bus-dest {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .eta-list {
+            margin-top: 8px;
+            display: flex;
+            gap: 15px;
+        }
+        .eta-badge {
+            background-color: #000;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .eta-badge.secondary {
+            background-color: #fff;
+            color: #000;
+            border: 2px solid #000;
+        }
+        .footer {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: right;
+            border-top: 2px solid #000;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <div class="header">
+            <div class="title">🚌 富蝶邨 實時巴士報站</div>
+            <div class="subtitle">目的地：太和 / 大埔墟</div>
+        </div>
+
+        <!-- 71K 巴士區塊 -->
+        <div class="bus-card">
+            <div class="bus-route">
+                <span>KMB 71K</span>
+                <span class="bus-dest">往 太和 / 大埔墟站</span>
+            </div>
+            <div class="eta-list" id="eta-71k">
+                <div class="eta-badge">載入中...</div>
+            </div>
+        </div>
+
+        <!-- 72K 巴士區塊 -->
+        <div class="bus-card">
+            <div class="bus-route">
+                <span>KMB 72K</span>
+                <span class="bus-dest">往 太和站</span>
+            </div>
+            <div class="eta-list" id="eta-72k">
+                <div class="eta-badge">載入中...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer" id="update-time">最後更新: --:--:--</div>
+
+    <script>
+        // 九巴 API 抓取函數
+        async function fetchETA(stopId, route, serviceType, elementId) {
+            const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const container = document.getElementById(elementId);
+                container.innerHTML = '';
+
+                if (!data.data || data.data.length === 0) {
+                    container.innerHTML = '<div class="eta-badge secondary">暫無班次</div>';
+                    return;
+                }
+
+                // 取前 2 班車
+                const validEtas = data.data.filter(item => item.eta !== null).slice(0, 2);
+
+                if (validEtas.length === 0) {
+                    container.innerHTML = '<div class="eta-badge secondary">未有預計時間</div>';
+                    return;
+                }
+
+                validEtas.forEach((item, index) => {
+                    const etaTime = new Date(item.eta);
+                    const now = new Date();
+                    const diffMins = Math.round((etaTime - now) / 60000);
+
+                    let displayText = '';
+                    if (diffMins <= 0) {
+                        displayText = '即將到站';
+                    } else {
+                        displayText = `${diffMins} 分鐘`;
+                    }
+
+                    const badge = document.createElement('div');
+                    badge.className = index === 0 ? 'eta-badge' : 'eta-badge secondary';
+                    badge.innerText = displayText;
+                    container.appendChild(badge);
+                });
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById(elementId).innerHTML = '<div class="eta-badge secondary">網絡錯誤</div>';
+            }
+        }
+
+        function updateAllETA() {
+            // 富蝶總站 - 71K (Service Type 1)
+            fetchETA('3926838891465FF9', '71K', '1', 'eta-71k');
+            // 富蝶總站 - 72K (Service Type 1)
+            fetchETA('3926838891465FF9', '72K', '1', 'eta-72k');
+
+            const now = new Date();
+            document.getElementById('update-time').innerText = `最後更新: ${now.toLocaleTimeString('zh-HK')}`;
+        }
+
+        // 首次執行
+        updateAllETA();
+
+        // 網頁內部每 15 秒自動重新抓取 API
+        setInterval(updateAllETA, 15000);
+    </script>
+</body>
+</html>
